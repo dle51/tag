@@ -48,4 +48,4 @@ for i in range(120):
         lookat = (0, 0, 0.5),
     )
     cam.render()
-cam.stop_recording(save_to_filename='simpleVisualizationVideo.mp4', fps=60)
+cam.stop_recording(save_to_filename='./mp4/user_guide/simple_visualization_video.mp4', fps=60)

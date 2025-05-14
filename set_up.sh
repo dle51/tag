@@ -1,0 +1,28 @@
+#!/bin/bash
+# A basic setup script for our tag environment
+
+# exit if failed
+set -e
+
+if [ -f README.md ]; then
+  echo "Backing up existing README.md..."
+  mv README.md README.md.bak
+fi
+
+echo "Creating UV environment"
+uv init
+
+if [ -f README.md ]; then
+  echo "Removing uv-generated README.md..."
+  rm README.md
+fi
+
+if [ -f README.md.bak ]; then
+  echo "Restoring original README.md..."
+  mv README.md.bak README.md
+fi
+
+echo "Adding required packages"
+uv add torch genesis-world tensorboard pyrender pyopengl-accelerate
+
+echo "Completed!"

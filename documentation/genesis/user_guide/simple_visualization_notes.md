@@ -1,4 +1,4 @@
-## simple_visualization_notes
+## Visualization Notes
 A walkthrough of the components in simple_visualization.py
 
 At the beginning of this script, we add

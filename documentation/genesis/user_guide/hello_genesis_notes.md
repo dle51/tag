@@ -1,4 +1,4 @@
-## hello_genesis.py Notes
+## Hello Genesis Notes
 Walkthrough of the components of the hello_genesis.py script
 
 ```python

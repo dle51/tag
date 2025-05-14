@@ -1,4 +1,4 @@
-## control_notes
+## Control Notes
 A walkthrough of the components in control.py
 
 We begin the script just like the previous script, adding one extra line

@@ -25,7 +25,7 @@ franka = scene.add_entity(
 )
 
 ### building parallel environments
-B = 50000
+B = 30000
 scene.build(B)
 
 # control all the robots

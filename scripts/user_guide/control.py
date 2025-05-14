@@ -136,4 +136,4 @@ for i in range(1250):
     cam.render()
 
 ### saving video
-cam.stop_recording(save_to_filename="controlVideo.mp4", fps=60)
+cam.stop_recording(save_to_filename="./mp4/user_guide/control_video.mp4", fps=60)

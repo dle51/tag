@@ -1,2 +1,5 @@
 .vscode/settings.json
-mp4/
+*.mp4
+.python-version
+pyproject.toml
+uv.lock

@@ -17,6 +17,11 @@ if [ -f README.md ]; then
   rm README.md
 fi
 
+if [ -f main.py ]; then
+  echo "Removing uv-generated main file..."
+  rm main.py
+fi
+
 if [ -f README.md.bak ]; then
   echo "Restoring original README.md..."
   mv README.md.bak README.md
@@ -24,5 +29,7 @@ fi
 
 echo "Adding required packages"
 uv add torch genesis-world tensorboard pyrender pyopengl-accelerate
+echo "Adding local OMPL module"
+uv add ./modules/ompl/ompl-1.7.0-cp310-cp310-manylinux_2_28_x86_64.whl
 
 echo "Completed!"

@@ -98,7 +98,7 @@ end_effector = franka.get_link('hand')
 # move to pre-grasp pose
 qpos = franka.inverse_kinematics(
     link = end_effector,
-    pos  = np.array([0.65, 0.0, 0.25]),
+    pos  = np.array([0.65, 0.0, 0.25]), # Note that in Mujoco (and Genesis), the z value refers to the "height"
     quat = np.array([0, 1, 0, 0]),
 )
 
@@ -124,7 +124,7 @@ path = franka.plan_path(
 )
 ```
 
-We pass through the target position and the number of waypoints that correlates to the amount of time the model will take to reach the target position. This method returns a list of waypoints, with each waypoint being an array of the `qpos` at that time step.
+We pass through the target position and the number of waypoints that correlates to the amount of time the model will take to reach the target position. This method returns a list of waypoints, with each waypoint being an array of the target positions for the dofs at that time step.
 
 Activating the camera, we then execute the movement through the planned path
 ```python
@@ -143,7 +143,56 @@ for i in range(100):
     cam.render()
 ```
 
-We iterate through each waypoint in the path and send an instruction to the Franka arm's PD controller to move to the target position at that time step, stepping and rendering each time. We allow the model another 100 time steps because after we send the final waypoint, the PD controller still has to manipulate the model to the final target position, 
+We iterate through each waypoint in the path and send an instruction to the Franka arm's PD controller to move to the target position at that time step, stepping and rendering each time. We allow the model another 100 time steps because after we send the final waypoint, the PD controller still has to manipulate the model to the final target position.
+
+From here, we instruct the model to "reach" by via inverse kinematics
+
+```python
+# reach
+qpos = franka.inverse_kinematics(
+    link = end_effector,
+    pos  = np.array([0.65, 0.0, 0.130]),
+    quat = np.array([0, 1, 0, 0]),
+)
+franka.control_dofs_position(qpos[:-2], motors_dof)
+for i in range(100):
+    scene.step()
+    cam.render()
+```
+
+The only value we manipulate here is the z axis, which means the robot is moving the hand downwards to be at the same level as the cube. We scrap the changes to the fingers of the hand and pass the movement to the main joints of the Franka arm. When you view the visualization of this script, its good to note that, even though we only changed one axis value, multiple joints move for the model to reach the target position. Following this, we send the instruction to grasp the cube
+
+```python
+# grasp
+franka.control_dofs_position(qpos[:-2], motors_dof)
+franka.control_dofs_force(np.array([-0.5, -0.5]), fingers_dof)
+
+for i in range(100):
+    scene.step()
+    cam.render()
+```
+
+Here is a good example of using the `rigid_entity.control_dofs_force()` method, we are applying 0.5 N of inward force to each of the gripper dofs, which results in the hand applying pressure to the cube, but not trying to reach an inner position and "crushing" the cube.
+
+Lastly, we create the instruction to pick up the cube
+```python
+# lift
+qpos = franka.inverse_kinematics(
+    link=end_effector,
+    pos=np.array([0.65, 0.0, 0.28]),
+    quat=np.array([0, 1, 0, 0]),
+)
+franka.control_dofs_position(qpos[:-2], motors_dof)
+for i in range(200):
+    scene.step()
+    cam.render()
+```
+
+Manipulating only the z-axis again, we create the target position to raise the hand of the Franka while maintaining the downright orientation of the hand. Because we aren't giving any instruction to the gripper dofs, they continue their previous instruction of applying force inwards, which allows the cube to stay inside the hand. Finally, we save the render.
+
+```python
+cam.stop_recording(save_to_filename="./mp4/user_guide/ik_mp_video.mp4", fps=60)
+```
 
 ### Resources
 [MathWorks Inverse Kinematics](https://www.mathworks.com/discovery/inverse-kinematics.html) \

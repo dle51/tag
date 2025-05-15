@@ -3,3 +3,4 @@
 .python-version
 pyproject.toml
 uv.lock
+modules/ompl

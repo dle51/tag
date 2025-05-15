@@ -30,6 +30,7 @@ fi
 echo "Adding required packages"
 uv add torch genesis-world tensorboard pyrender pyopengl-accelerate
 echo "Adding local OMPL module"
+wget -P ./modules/ompl/ https://github.com/ompl/ompl/releases/download/prerelease/ompl-1.7.0-cp310-cp310-manylinux_2_28_x86_64.whl
 uv add ./modules/ompl/ompl-1.7.0-cp310-cp310-manylinux_2_28_x86_64.whl
 
 echo "Completed!"

@@ -1,4 +1,6 @@
 # Genesis User Guides
+<!-- TODO: Update scripts to have hyperlinks to relevant information -->
+<!-- TODO: Proofread documentation for errors (late night writing may be productive, but it definitely isn't good for grammar) -->
 Notes covering the scripts and information found in the Genesis [user guide](https://genesis-world.readthedocs.io/en/latest/user_guide/index.html).
 
 ##### Getting Started

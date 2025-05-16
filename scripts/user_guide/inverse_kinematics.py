@@ -66,7 +66,7 @@ franka.set_dofs_force_range(
     np.array([ 87,  87,  87,  87,  12,  12,  12,  100,  100]),
 )
 
-### inverse kinematics and motion planning
+### inverse kinematics
 
 # get the end-effector link
 end_effector = franka.get_link('hand')
@@ -80,11 +80,6 @@ qpos = franka.inverse_kinematics(
 
 # gripper open pos
 qpos[-2:] = 0.04
-
-path = franka.plan_path(
-    qpos_goal     = qpos,
-    num_waypoints = 200, # 2s duration
-)
 
 ### activate camera
 cam.start_recording()

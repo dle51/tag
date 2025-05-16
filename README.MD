@@ -9,7 +9,7 @@
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-2. Run the script to create the UV project environment and add dependencies
+2. Run the script to create the UV project environment and add dependencies - Asks you if you want to install motion planning library (not required)
 ```bash
 make setup
 ```

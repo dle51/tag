@@ -1,5 +1,7 @@
-# Tag Initial Setup Guide
-Quick guide on how to setup Genesis on the cluster server and get the first two initial scripts running
+# Tag Initial Setup Notes
+<!-- TODO: Rewrite and update to match current setup -->
+Quick guide on how to setup Genesis on the cluster server and get the first two initial scripts running.
+You can run the included make script via `make setup` to form the environment. 
 
 ## Project Manager
 We are using the UV project manager for now.
@@ -152,4 +154,4 @@ for i in range(120):
     cam.render()
 cam.stop_recording(save_to_filename='video.mp4', fps=60)
 ```
-This will save an MP4 file named `video.mp4` to our project root directory. We can scp this file into our local machine and view it using a video player like VLC or MPV
+This will save an MP4 file named `video.mp4` to our project root directory. We can scp this file into our local machine and view it using a video player like VLC or MPV.

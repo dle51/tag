@@ -47,8 +47,10 @@ scene.build(n_envs=n_envs, env_spacing=(1.0, 1.0))
 ### ik&mp
 target_quat = np.tile(np.array([0, 1, 0, 0]), [n_envs, 1]) # pointing downwards
 center = np.tile(np.array([0.4, -0.2, 0.25]), [n_envs, 1])
-angular_speed = np.random.uniform(-10, 10, n_envs)
+#radius of the circle 
 r = 0.1
+# random speeds for each environment
+angular_speed = np.random.uniform(-10, 10, n_envs)
 
 ee_link = robot.get_link('hand')
 

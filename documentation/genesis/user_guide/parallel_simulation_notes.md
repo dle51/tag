@@ -1,4 +1,4 @@
-# Parallelization Notes
+# Parallel Simulation Notes
 A walkthrough of the components in the parallel_visualized.py and parallel_benchmark.py scripts from the Genesis User Guide
 
 The main benefit of Genesis over other physics engines for RL learning is its efficiency in training in thousands of environments at once. Focusing on the parallel_visualized.py script first, we have a basic creation of the scene containing a plane, Franka arm, and a camera

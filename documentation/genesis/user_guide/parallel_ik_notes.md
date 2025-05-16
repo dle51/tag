@@ -1,5 +1,5 @@
 # Parallel Inverse Kinematic Notes
-Overview of the `parallel_ik.py` script from the [Genesis User Guide](https://genesis-world.readthedocs.io/en/latest/user_guide/getting_started/advanced_ik.html). \
+Overview of the `parallel_ik.py` script from the [Genesis User Guide](https://genesis-world.readthedocs.io/en/latest/user_guide/getting_started/advanced_ik.html).
 
 Combining two ideas, inverse kinematics and batched environments, we can have each environment's Franka arm's trace a circle like in the previous script `advanced_ik.py`, but we are setting the Franka's hand as the end-effector and having each environment trace the circle at a different speed.
 

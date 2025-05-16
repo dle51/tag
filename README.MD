@@ -1,5 +1,6 @@
 # Tag
 ### Robotic Tag with Preference Learning
+[Genesis Physics Engine](https://github.com/Genesis-Embodied-AI/Genesis/tree/3d1d88cb9525f121b7e296674abbbba9c8c8c2c8)
 
 ## Quick Start
 
@@ -18,7 +19,7 @@ make setup
 uv run scripts/user_guide/control.py
 ```
 ```bash
-# from local machine
+# on local machine
 scp dij:~/tag/mp4/user_guide/control_video.mp4 .
 # use your favorite media player!
 mpv control_video.mp4

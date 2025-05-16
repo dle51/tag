@@ -145,7 +145,9 @@ for i in range(100):
 
 We iterate through each waypoint in the path and send an instruction to the Franka arm's PD controller to move to the target position at that time step, stepping and rendering each time. We allow the model another 100 time steps because after we send the final waypoint, the PD controller still has to manipulate the model to the final target position.
 
-From here, we instruct the model to "reach" by via inverse kinematics
+In the version without motion planning, we can replace the last two code blocks with a single `control_dofs_position()` instruction and loop.
+
+From here, we instruct the model to "reach" via inverse kinematics.
 
 ```python
 # reach

@@ -51,7 +51,7 @@ for i in range(120):
         lookat = (0, 0, 0.5),
     )
     cam.render()
-cam.stop_recording(save_to_filename='simpleVisualizationVideo.mp4', fps=60)
+cam.stop_recording(save_to_filename='./mp4/user_guide/simple_visualization_video.mp4', fps=60)
 ```
 
 `cam.set_pose()` changes where the camera is looking, and using some sin and cosine, we can rotate the camera around the franka arm each iteration. At the end of the script, we can save the camera's recording.

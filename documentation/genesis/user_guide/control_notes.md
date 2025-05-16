@@ -31,7 +31,7 @@ scene = gs.Scene(
 )
 ```
 
-We add the `sim_options` parameter of dt, which specifies the timestep of the simulator. Following this, we add our entities and camera, then build our scene
+We add the `sim_options` parameter of dt, which specifies the time step of the simulator. Following this, we add our entities and camera, then build our scene
 
 ```python
 ### entities

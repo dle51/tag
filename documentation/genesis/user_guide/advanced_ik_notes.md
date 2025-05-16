@@ -1,7 +1,7 @@
 # Advanced Inverse Kinematic Notes
-Overview of the `advanced_ik.py` script from the [Genesis User Guide](https://genesis-world.readthedocs.io/en/latest/user_guide/getting_started/advanced_ik.html). \
+Overview of the `advanced_ik.py` script from the [Genesis User Guide](https://genesis-world.readthedocs.io/en/latest/user_guide/getting_started/advanced_ik.html). 
 
-In the previous IK script, we defined only one link, the gripper of the Franka arm, as the end-effector. In this script, we are going to define each of the fingers in the gripper as two separate target links and having them trace a horizontal circle in midair. We begin this script the same way as before.
+In the previous `ik_mp.py` script, we defined only one link, the gripper of the Franka arm, as the end-effector. In this script, we are going to define each of the fingers in the gripper as two separate target links and having them trace a horizontal circle in midair. We begin this script the same way as before.
 
 ```python
 import os
@@ -14,7 +14,7 @@ import genesis as gs
 gs.init(seed=0, precision='32', logging_level='debug')
 ```
 
-In this example, the guide passes a few parameters we haven't seen before to the [`genesis.init()`](https://github.com/Genesis-Embodied-AI/Genesis/blob/3d1d88cb9525f121b7e296674abbbba9c8c8c2c8/genesis/__init__.py#L49) method. Here, `seed` allows us to control the stochastic behavior of the `random`, `numpy`, and `torch` libraries. `taichi` only supports deterministic functions, so this setting doesn't affect it. `precision` defines the bit precision of `taichi`, `numpy`, and `torch`, where 32 bit is faster but less precise and 64 bit is the opposite. Finally, `logging_level` defines which logs get printed to console.
+In this example, the guide passes a few parameters we haven't seen before to the [`genesis.init()`](https://github.com/Genesis-Embodied-AI/Genesis/blob/3d1d88cb9525f121b7e296674abbbba9c8c8c2c8/genesis/__init__.py#L49) method. Here, `seed` allows us to control the stochastic behavior of the `random`, `numpy`, and `torch` libraries. `taichi` only supports deterministic functions, so this setting doesn't affect it. The `precision` argument defines the float precision of `taichi`, `numpy`, and `torch`, where 32 bit is faster but less precise and 64 bit is the opposite. Finally, `logging_level` defines which logs get printed to console. With the `debug` setting, we'll see some extra information about the scene during the execution of the script.
 
 From here, we define our scene and entities like usual.
 

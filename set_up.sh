@@ -41,7 +41,7 @@ else
 fi
 
 echo "Adding debugging packages"
-uv add ipython
+uv add ipython ipdb
 
 echo "Adding Weights & Biases"
 uv add wandb

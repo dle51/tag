@@ -30,11 +30,20 @@ fi
 echo "Adding required packages"
 uv add torch genesis-world tensorboard pyrender pyopengl-accelerate
 
-echo "Adding local OMPL module"
-wget -P ./modules/ompl/ https://github.com/ompl/ompl/releases/download/prerelease/ompl-1.7.0-cp310-cp310-manylinux_2_28_x86_64.whl
-uv add ./modules/ompl/ompl-1.7.0-cp310-cp310-manylinux_2_28_x86_64.whl
+# Optional OMPL installation
+read -p "Install OMPL for Motion Planning? (y/n): " install_ompl
+if [[ "$install_ompl" == "y" || "$install_ompl" == "Y" ]]; then
+    echo "Adding local OMPL module"
+    wget -P ./modules/ompl/ https://github.com/ompl/ompl/releases/download/prerelease/ompl-1.7.0-cp310-cp310-manylinux_2_28_x86_64.whl
+    uv add ./modules/ompl/ompl-1.7.0-cp310-cp310-manylinux_2_28_x86_64.whl
+else
+    echo "Skipping OMPL installation"
+fi
 
-echo "Adding IPython for Debugging"
-uv add ipython
+echo "Adding debugging packages"
+uv add ipython ipdb
+
+echo "Adding Weights & Biases"
+uv add wandb
 
 echo "Completed!"

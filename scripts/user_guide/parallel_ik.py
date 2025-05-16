@@ -44,8 +44,10 @@ cam = scene.add_camera(
 n_envs = 16
 scene.build(n_envs=n_envs, env_spacing=(1.0, 1.0))
 
-### ik&mp
-target_quat = np.tile(np.array([0, 1, 0, 0]), [n_envs, 1]) # pointing downwards
+### target positions
+# orient the fingers downwards
+target_quat = np.tile(np.array([0, 1, 0, 0]), [n_envs, 1])
+# center of the circle to be traced
 center = np.tile(np.array([0.4, -0.2, 0.25]), [n_envs, 1])
 #radius of the circle 
 r = 0.1
@@ -73,7 +75,7 @@ for i in range(0, 1000):
     )
 
     robot.set_qpos(q)
-    scene.step()
+    scene.visualizer.update()
     cam.render()
 
 cam.stop_recording(save_to_filename="./mp4/user_guide/parallel_ik_video.mp4", fps=60)

@@ -58,12 +58,14 @@ cam = scene.add_camera(
 )
 
 ### build
-
 scene.build()
 
-### ???
+### target positions
+# point the fingers downwards
 target_quat = np.array([0, 1, 0, 0])
+# center of the circle to trace around
 center = np.array([0.4, -0.2, 0.25])
+# radius of the circle
 r = 0.1
 
 # Links

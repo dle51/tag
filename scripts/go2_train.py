@@ -6,6 +6,7 @@ import shutil
 import genesis as gs
 from rich.pretty import pprint
 import tyro
+import wandb
 
 from rsl_rl.runners import OnPolicyRunner
 from tag.gym.envs.walk.walk import Walk, WalkEnvConfig
@@ -165,6 +166,7 @@ def main(cfg: Config):
     env.build()
 
     runner = OnPolicyRunner(env, train_cfg, log_dir, device=gs.device)
+    wandb.init(project="Walk", name=cfg.exp_name, dir=log_dir, mode="online")
     runner.learn(num_learning_iterations=cfg.train_steps, init_at_random_ep_len=True)
 
 

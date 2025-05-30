@@ -1,15 +1,14 @@
-import math
 from dataclasses import dataclass
+import math
 
 import genesis as gs
-import torch
-from genesis.utils.geom import (inv_quat, quat_to_xyz, transform_by_quat,
-                                transform_quat_by_quat)
+from genesis.utils.geom import inv_quat, quat_to_xyz, transform_by_quat, transform_quat_by_quat
 from rich.pretty import pprint
+import torch
 
 from tag.gym.envs.mixins.reward import RewardMixin, WalkReward
 from tag.gym.envs.robotic import Go2EnvConfig, RobotEnv
-from tag.gym.robots.joystick_go2 import DEFAULT, OVERFIT, CommandConfig
+from tag.gym.robots.joystick_go2 import OVERFIT, CommandConfig
 from tag.protocols import Wraps, _Env, _Robot
 from tag.utils import default, defaultcls
 
@@ -37,9 +36,7 @@ class RSLWrapper(_Env, Wraps):
     def __init__(self, env: _Env):
         super().__init__(env)
         self.env = env
-        self.num_envs = (
-            self.cfg.sim.num_envs
-        )  # for rsl rl # TODO make some env conversion
+        self.num_envs = self.cfg.sim.num_envs  # for rsl rl # TODO make some env conversion
 
         self.num_obs = self.observe().shape
         self.num_privileged_obs = None
@@ -89,9 +86,7 @@ class Walk(RobotEnv, RewardMixin):
         self.resample_t = int(env_cfg["resampling_time_s"] / self.cfg.sim.dt)
 
         self.simulate_action_latency = True  # there is a 1 step latency on real robot
-        self.max_episode_length = math.ceil(
-            env_cfg["episode_length_s"] / self.cfg.sim.dt
-        )
+        self.max_episode_length = math.ceil(env_cfg["episode_length_s"] / self.cfg.sim.dt)
 
         self.env_cfg = env_cfg
         self.obs_cfg = obs_cfg
@@ -124,26 +119,14 @@ class Walk(RobotEnv, RewardMixin):
         # cmd = (high-low)*torch.rand(size=(len(envs_idx), 3), device=gs.device)+ low
         # return cmd
 
-        self.commands[envs_idx, 0] = _rand_float(
-            *self.cfg.command.lin_vel_x_range, (len(envs_idx),), gs.device
-        )
-        self.commands[envs_idx, 1] = _rand_float(
-            *self.cfg.command.lin_vel_y_range, (len(envs_idx),), gs.device
-        )
-        self.commands[envs_idx, 2] = _rand_float(
-            *self.cfg.command.ang_vel_range, (len(envs_idx),), gs.device
-        )
+        self.commands[envs_idx, 0] = _rand_float(*self.cfg.command.lin_vel_x_range, (len(envs_idx),), gs.device)
+        self.commands[envs_idx, 1] = _rand_float(*self.cfg.command.lin_vel_y_range, (len(envs_idx),), gs.device)
+        self.commands[envs_idx, 2] = _rand_float(*self.cfg.command.ang_vel_range, (len(envs_idx),), gs.device)
 
     def step(self, actions):
-        self.actions = torch.clip(
-            actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"]
-        )
-        exec_actions = (
-            self.last_actions if self.simulate_action_latency else self.actions
-        )
-        target_dof_pos = (
-            exec_actions * self.env_cfg["action_scale"] + self.default_dof_pos
-        )
+        self.actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
+        exec_actions = self.last_actions if self.simulate_action_latency else self.actions
+        target_dof_pos = exec_actions * self.env_cfg["action_scale"] + self.default_dof_pos
         self.robot.robot.control_dofs_position(target_dof_pos, self.robot.dofs)
         self.scene.step()
 
@@ -177,20 +160,12 @@ class Walk(RobotEnv, RewardMixin):
         # check termination and reset
         self.checks = {
             "truncate": self.episode_length_buf > self.max_episode_length,
-            "pitch": torch.abs(self.base_euler[:, 1])
-            > self.cfg.rewards.termination_if_pitch_greater_than,
-            "roll": torch.abs(self.base_euler[:, 0])
-            > self.cfg.rewards.termination_if_roll_greater_than,
-            "height": self.base_pos[:, 2]
-            < self.cfg.rewards.termination_if_height_lower_than,
+            "pitch": torch.abs(self.base_euler[:, 1]) > self.cfg.rewards.termination_if_pitch_greater_than,
+            "roll": torch.abs(self.base_euler[:, 0]) > self.cfg.rewards.termination_if_roll_greater_than,
+            "height": self.base_pos[:, 2] < self.cfg.rewards.termination_if_height_lower_than,
         }
         # pprint({k: v.sum().item() for k, v in self.checks.items()})
-        self.reset_buf = (
-            self.checks["truncate"]
-            | self.checks["pitch"]
-            | self.checks["roll"]
-            | self.checks["height"]
-        )
+        self.reset_buf = self.checks["truncate"] | self.checks["pitch"] | self.checks["roll"] | self.checks["height"]
 
         # time_out_idx = self.episode_length_buf > self.max_episode_length
         time_out_idx = self.checks["truncate"].nonzero(as_tuple=False).flatten()
@@ -215,8 +190,7 @@ class Walk(RobotEnv, RewardMixin):
                 self.base_ang_vel * self.obs_scales["ang_vel"],  # 3
                 self.projected_gravity,  # 3
                 self.commands * self.commands_scale,  # 3
-                (self.dof_pos - self.default_dof_pos)
-                * self.obs_scales["dof_pos"],  # 12
+                (self.dof_pos - self.default_dof_pos) * self.obs_scales["dof_pos"],  # 12
                 self.dof_vel * self.obs_scales["dof_vel"],  # 12
                 self.actions * self.env_cfg["action_scale"],  # 12
             ],
@@ -252,7 +226,6 @@ class Walk(RobotEnv, RewardMixin):
         return None
 
     def reset_idx(self, envs_idx):
-
         # self.robot.reset(envs_idx=envs_idx)
 
         if len(envs_idx) == 0:
@@ -271,15 +244,9 @@ class Walk(RobotEnv, RewardMixin):
 
         # reset base
         self.base_pos[envs_idx] = self.base_init_pos[envs_idx].clone()  # copy init pos
-        self.base_quat[envs_idx] = self.base_init_quat[
-            envs_idx
-        ].clone()  # copy init quat
-        self.robot.robot.set_pos(
-            self.base_pos[envs_idx], zero_velocity=False, envs_idx=envs_idx
-        )
-        self.robot.robot.set_quat(
-            self.base_quat[envs_idx], zero_velocity=False, envs_idx=envs_idx
-        )
+        self.base_quat[envs_idx] = self.base_init_quat[envs_idx].clone()  # copy init quat
+        self.robot.robot.set_pos(self.base_pos[envs_idx], zero_velocity=False, envs_idx=envs_idx)
+        self.robot.robot.set_quat(self.base_quat[envs_idx], zero_velocity=False, envs_idx=envs_idx)
         self.base_lin_vel[envs_idx] = 0
         self.base_ang_vel[envs_idx] = 0
         self.robot.robot.zero_all_dofs_velocity(envs_idx)
@@ -294,8 +261,7 @@ class Walk(RobotEnv, RewardMixin):
         self.extras["episode"] = {}
         for key in self.episode_sums.keys():
             self.extras["episode"]["rew_" + key] = (
-                torch.mean(self.episode_sums[key][envs_idx]).item()
-                / self.env_cfg["episode_length_s"]
+                torch.mean(self.episode_sums[key][envs_idx]).item() / self.env_cfg["episode_length_s"]
             )
             self.episode_sums[key][envs_idx] = 0.0
 
@@ -330,9 +296,7 @@ class Walk(RobotEnv, RewardMixin):
         self.torque_limits = self.robot.torque_limits()
 
         # contact gait
-        self.last_contacts = torch.zeros(
-            (self.num_envs, len(self.idxs["feet"])), device=self.device, dtype=gs.tc_int
-        )
+        self.last_contacts = torch.zeros((self.num_envs, len(self.idxs["feet"])), device=self.device, dtype=gs.tc_int)
         self.link_contact_forces = self.robot.contact_forces
         self.feet_air_time = torch.zeros(
             (self.num_envs, len(self.idxs["feet"])),
@@ -346,14 +310,11 @@ class Walk(RobotEnv, RewardMixin):
         self.inv_base_init_quat = self.robot.inv_quat
 
     def _init_buffers(self):
-
         self.base_lin_vel = _float((self.B, 3))
         self.base_ang_vel = _float((self.B, 3))
 
         self.projected_gravity = _float((self.B, 3))
-        self.global_gravity = torch.tensor(
-            [0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float
-        ).repeat(self.B, 1)
+        self.global_gravity = torch.tensor([0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float).repeat(self.B, 1)
 
         self.obs_buf = _float((self.B, self.num_obs))
         self.rew_buf = _float((self.B,))

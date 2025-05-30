@@ -1,20 +1,17 @@
 from dataclasses import dataclass
 
+from flax.traverse_util import flatten_dict
 import genesis as gs
+from genesis.utils.geom import transform_by_quat
+from gymnasium import spaces
 import numpy as np
 import torch
-from flax.traverse_util import flatten_dict
-from genesis.utils.geom import (inv_quat, quat_to_xyz, transform_by_quat,
-                                transform_quat_by_quat)
-from gymnasium import spaces
-from rich.pretty import pprint
 
 from tag.names import BASE
 from tag.protocols import Wraps
-from tag.utils import default, defaultcls, space2spec
+from tag.utils import default
 
 from .go2 import Go2Robot
-from .robot import Robot
 
 
 @dataclass
@@ -106,9 +103,7 @@ class JoyStickGo2(Wraps):
         dof_pos, dof_vel = obs["dof.pos"], obs["dof.vel"]
 
         action = self.action if self.action is not None else torch.zeros_like(dof_pos)
-        self.global_gravity = torch.tensor(
-            [0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float
-        ).repeat(self.B, 1)
+        self.global_gravity = torch.tensor([0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float).repeat(self.B, 1)
         projected_gravity = transform_by_quat(self.global_gravity, self.inv_quat)
 
         _obs = {

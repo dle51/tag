@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import genesis as gs
-import tyro
 from rich.pretty import pprint
 from tqdm import tqdm
+import tyro
 
 from tag.gym.envs.chase.chase import Chase, ChaseEnvConfig
 from tag.policy.dummy import DummyPolicy

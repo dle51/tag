@@ -94,7 +94,7 @@ class RewardMixin:
         Calls each reward function which had a non-zero scale (processed in self._prepare_reward_function())
         adds each terms to the episode sums and to the total reward
         """
-        self.rew_buf[:] = 0.0 # reset reward buffer
+        self.rew_buf[:] = 0.0  # reset reward buffer
         for name, fn in self.reward_functions.items():
             rew = fn() * self.reward_scales[name]
 
@@ -109,8 +109,6 @@ class RewardMixin:
             rew = self._reward_termination() * self.reward_scales["termination"]
             self.rew_buf += rew
             self.episode_sums["termination"] += rew
-
-
 
     #
     # ------------ reward functions----------------

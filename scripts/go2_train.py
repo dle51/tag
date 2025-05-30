@@ -1,35 +1,21 @@
 from dataclasses import dataclass
-from importlib import metadata
 import json
 from pathlib import Path
 import shutil
 
 import genesis as gs
 from rich.pretty import pprint
-from rsl_rl.runners import OnPolicyRunner
 import tyro
 
+from rsl_rl.runners import OnPolicyRunner
 from tag.gym.envs.walk.walk import Walk, WalkEnvConfig
 
 # from tag.gym.base.config import Control
 
 
-def check_rsl_rl():
-    try:
-        try:
-            if metadata.version("rsl-rl"):
-                raise ImportError
-        except metadata.PackageNotFoundError:
-            if metadata.version("rsl-rl-lib") != "2.2.4":
-                raise ImportError
-    except (metadata.PackageNotFoundError, ImportError) as e:
-        raise ImportError("Please uninstall 'rsl_rl' and install 'rsl-rl-lib==2.2.4'.") from e
-
-
 def get_train_cfg(exp_name, max_iterations):
     train_cfg_dict = {
         "algorithm": {
-            "class_name": "PPO",
             "clip_param": 0.2,
             "desired_kl": 0.01,
             "entropy_coef": 0.01,
@@ -49,24 +35,25 @@ def get_train_cfg(exp_name, max_iterations):
             "actor_hidden_dims": [512, 256, 128],
             "critic_hidden_dims": [512, 256, 128],
             "init_noise_std": 1.0,
-            "class_name": "ActorCritic",
         },
         "runner": {
+            "algorithm_class_name": "PPO",
             "checkpoint": -1,
             "experiment_name": exp_name,
             "logger": "wandb",
             "wandb_project": "tag_walk",
+            "policy_class_name": "ActorCritic",
             "load_run": -1,
             "log_interval": 1,
             "max_iterations": max_iterations,
-            "record_interval": -1,
+            "record_interval": 50,
             "resume": False,
             "resume_path": None,
             "run_name": "",
+            "num_steps_per_env": 24,
+            "save_interval": 100,
         },
         "runner_class_name": "OnPolicyRunner",
-        "num_steps_per_env": 24,
-        "save_interval": 100,
         "empirical_normalization": None,
         "seed": 1,
     }
@@ -160,7 +147,6 @@ class Config(WalkEnvConfig):
 
 
 def main(cfg: Config):
-    check_rsl_rl()
     gs.init(logging_level="warning")
 
     pprint(cfg)

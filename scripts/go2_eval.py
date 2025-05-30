@@ -4,11 +4,11 @@ from pathlib import Path
 
 import genesis as gs
 from go2_train import Config
-from rsl_rl.runners import OnPolicyRunner
 import torch
 from tqdm import tqdm
 import tyro
 
+from rsl_rl.runners import OnPolicyRunner
 from tag.gym.envs.walk.walk import Walk
 from tag.names import BASE
 
@@ -17,13 +17,13 @@ def load_configs(log_dir):
     with open(log_dir / "configs.json", "r") as f:
         _cfgs = json.load(f)
 
-    env_cfg, obs_cfg,  train_cfg = (
+    env_cfg, obs_cfg, train_cfg = (
         _cfgs["env_cfg"],
         _cfgs["obs_cfg"],
         # _cfgs["command_cfg"],
         _cfgs["train_cfg"],
     )
-    return env_cfg, obs_cfg,  train_cfg
+    return env_cfg, obs_cfg, train_cfg
 
 
 @dataclass
@@ -39,12 +39,13 @@ def main(cfg: EvalConfig):
     gs.init()
 
     log_dir = Path(cfg.path)
-    env_cfg, obs_cfg,  train_cfg = load_configs(log_dir)
+    env_cfg, obs_cfg, train_cfg = load_configs(log_dir)
     env = Walk(
         cfg,
         env_cfg=env_cfg,
         obs_cfg=obs_cfg,
     )
+    env.build()
 
     if cfg.use_ts:
         pi = torch.jit.load(str(BASE / "policy.ts.pt")).to(gs.device)
@@ -54,7 +55,6 @@ def main(cfg: EvalConfig):
         runner.load(str(resume_path))
         pi = runner.get_inference_policy(device=gs.device)
 
-    env.build()
     obs, _ = env.reset()
     with torch.no_grad():
         for _ in tqdm(range(len(env)), desc="Eval..."):

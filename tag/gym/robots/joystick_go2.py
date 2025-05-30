@@ -25,9 +25,21 @@ class CommandConfig:
 DEFAULT = CommandConfig()
 OVERFIT = CommandConfig(
     num_commands=3,
-    lin_vel_x_range=[0.05, 0.05],
+    lin_vel_x_range=[0.5, 0.5],
     lin_vel_y_range=[0.0, 0.0],
-    ang_vel_range=[0.0, 0.0],
+    ang_vel_range=[0, 0],
+)
+RIGHT = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.0, 0.0],
+    lin_vel_y_range=[1.0, 1.0],
+    ang_vel_range=[0, 0],
+)
+LEFT = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.0, 0.0],
+    lin_vel_y_range=[1.0, 1.0],
+    ang_vel_range=[0, 0],
 )
 
 

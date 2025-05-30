@@ -3,10 +3,10 @@ from pathlib import Path
 
 import genesis as gs
 from go2_eval import load_configs
-from rsl_rl.runners import OnPolicyRunner
 import torch
 import tyro
 
+from rsl_rl.runners import OnPolicyRunner
 from tag.gym.envs.walk.walk import Walk, WalkEnvConfig
 from tag.names import BASE
 from tag.utils import defaultcls

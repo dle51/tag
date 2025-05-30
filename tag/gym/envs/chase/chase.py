@@ -2,9 +2,7 @@ from dataclasses import dataclass
 from typing import Tuple
 
 import genesis as gs
-import numpy as np
 import torch
-from gymnasium.spaces import Dict
 
 from tag.gym.base.config import Task
 from tag.gym.envs.robotic import MultiGo2EnvConfig, RobotEnv
@@ -67,9 +65,7 @@ class Chase(RobotEnv):
         )
         if self.cfg.joy:  # manually wrap joy go2
             for k, r in self.robot.robots.items():
-                self.robot.robots[k] = JoyStickGo2(
-                    r, cmd=self.cfg.cmd, scales=self.cfg.scales
-                )
+                self.robot.robots[k] = JoyStickGo2(r, cmd=self.cfg.cmd, scales=self.cfg.scales)
 
     def set_control_gains(self):
         # TODO: Implement Method - Should this method be in another class?

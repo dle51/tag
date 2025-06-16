@@ -42,7 +42,7 @@ def main(cfg: Config):
     # check_rsl_rl()
     gs.init()
 
-    env_cfg, obs_cfg, command_cfg, train_cfg = load_configs(cfg.path)
+    env_cfg, obs_cfg, train_cfg = load_configs(cfg.path)
     env = Walk(
         cfg.env,
         env_cfg=env_cfg,

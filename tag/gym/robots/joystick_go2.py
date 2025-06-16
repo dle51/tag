@@ -1,37 +1,205 @@
 from dataclasses import dataclass
 
+from flax.traverse_util import flatten_dict
 import genesis as gs
+from genesis.utils.geom import transform_by_quat
+from gymnasium import spaces
 import numpy as np
 import torch
-from flax.traverse_util import flatten_dict
-from genesis.utils.geom import (inv_quat, quat_to_xyz, transform_by_quat,
-                                transform_quat_by_quat)
-from gymnasium import spaces
-from rich.pretty import pprint
 
 from tag.names import BASE
 from tag.protocols import Wraps
-from tag.utils import default, defaultcls, space2spec
+from tag.utils import default
 
 from .go2 import Go2Robot
-from .robot import Robot
 
 
 @dataclass
 class CommandConfig:
     num_commands: int = 3
-    lin_vel_x_range: list[float] = default([-0.5, 1.0])
-    lin_vel_y_range: list[float] = default([-0.1, 0.1])
-    ang_vel_range: list[float] = default([-0.2, 0.2])
+    lin_vel_x_range: list[float] = default([-1.75, 2.25])
+    lin_vel_y_range: list[float] = default([-1.75, 1.75])
+    ang_vel_range: list[float] = default([-1.0, 1.0])
 
 
 DEFAULT = CommandConfig()
 OVERFIT = CommandConfig(
     num_commands=3,
-    lin_vel_x_range=[0.05, 0.05],
+    lin_vel_x_range=[0.7, 0.7],
     lin_vel_y_range=[0.0, 0.0],
     ang_vel_range=[0.0, 0.0],
 )
+FORWARDFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[2.25, 2.25],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[0.0, 0.0],
+)
+FORWARDSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.5, 0.5],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[0.0, 0.0],
+)
+BACKWARDFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-1.75, -1.75],  # was -2.25
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[0.0, 0.0],
+)
+BACKWARDSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-0.5, -0.5],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[0.0, 0.0],
+)
+SIDEWAYSRIGHTFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.0, 0.0],
+    lin_vel_y_range=[1.75, 1.75],  # was 2.25
+    ang_vel_range=[0.0, 0.0],
+)
+SIDEWAYSRIGHTSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.0, 0.0],
+    lin_vel_y_range=[0.5, 0.5],
+    ang_vel_range=[0.0, 0.0],
+)
+SIDEWAYSLEFTFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.0, 0.0],
+    lin_vel_y_range=[-1.75, -1.75],  # was -2.25
+    ang_vel_range=[0.0, 0.0],
+)
+SIDEWAYSLEFTSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.0, 0.0],
+    lin_vel_y_range=[-0.5, -0.5],
+    ang_vel_range=[0.0, 0.0],
+)
+FORWARDRIGHTDIAGONALFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[2.25, 2.25],
+    lin_vel_y_range=[1.75, 1.75],  # was 2.25
+    ang_vel_range=[0.0, 0.0],
+)
+FORWARDRIGHTDIAGONALSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.5, 0.5],
+    lin_vel_y_range=[0.5, 0.5],
+    ang_vel_range=[0.0, 0.0],
+)
+FORWARDLEFTDIAGONALFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[2.25, 2.25],
+    lin_vel_y_range=[-1.75, -1.75],  # was -2.25
+    ang_vel_range=[0.0, 0.0],
+)
+FORWARDLEFTDIAGONALSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.5, 0.5],
+    lin_vel_y_range=[-0.5, -0.5],
+    ang_vel_range=[0.0, 0.0],
+)
+BACKWARDRIGHTDIAGONALFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-1.75, -1.75],  # was -2.25
+    lin_vel_y_range=[1.75, 1.75],  # was 2.25
+    ang_vel_range=[0.0, 0.0],
+)
+BACKWARDRIGHTDIAGONALSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-0.5, -0.5],
+    lin_vel_y_range=[0.5, 0.5],
+    ang_vel_range=[0.0, 0.0],
+)
+BACKWARDLEFTDIAGONALFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-1.75, -1.75],  # was -2.25
+    lin_vel_y_range=[-1.75, -1.75],  # was -2.25
+    ang_vel_range=[0.0, 0.0],
+)
+BACKWARDLEFTDIAGONALSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-0.5, -0.5],
+    lin_vel_y_range=[-0.5, -0.5],
+    ang_vel_range=[0.0, 0.0],
+)
+FORWARDTURNRIGHTFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.7, 0.7],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[0.7, 0.7],
+)
+FORWARDTURNRIGHTSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.7, 0.7],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[0.2, 0.2],
+)
+FORWARDTURNLEFTFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.7, 0.7],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[-0.7, -0.7],
+)
+FORWARDTURNLEFTSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[0.7, 0.7],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[-0.2, -0.2],
+)
+BACKWARDTURNRIGHTFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-0.7, -0.7],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[0.7, 0.7],
+)
+BACKWARDTURNRIGHTSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-0.7, -0.7],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[0.2, 0.2],
+)
+BACKWARDTURNLEFTFAST = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-0.7, -0.7],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[-0.7, -0.7],
+)
+BACKWARDTURNLEFTSLOW = CommandConfig(
+    num_commands=3,
+    lin_vel_x_range=[-0.7, -0.7],
+    lin_vel_y_range=[0.0, 0.0],
+    ang_vel_range=[-0.2, -0.2],
+)
+
+commands = {
+    "FF": FORWARDFAST,
+    "FS": FORWARDSLOW,
+    "BF": BACKWARDFAST,
+    "BS": BACKWARDSLOW,
+    "SRF": SIDEWAYSRIGHTFAST,
+    "SRS": SIDEWAYSRIGHTSLOW,
+    "SLF": SIDEWAYSLEFTFAST,
+    "SLS": SIDEWAYSLEFTSLOW,
+    "FRDF": FORWARDRIGHTDIAGONALFAST,
+    "FRDS": FORWARDRIGHTDIAGONALSLOW,
+    "FLDF": FORWARDLEFTDIAGONALFAST,
+    "FLDS": FORWARDLEFTDIAGONALSLOW,
+    "BRDF": BACKWARDRIGHTDIAGONALFAST,
+    "BRDS": BACKWARDRIGHTDIAGONALSLOW,
+    "BLDF": BACKWARDLEFTDIAGONALFAST,
+    "BLDS": BACKWARDLEFTDIAGONALSLOW,
+    "FTRF": FORWARDTURNRIGHTFAST,
+    "FTRS": FORWARDTURNRIGHTSLOW,
+    "FTLF": FORWARDTURNLEFTFAST,
+    "FTLS": FORWARDTURNLEFTSLOW,
+    "BTRF": BACKWARDTURNRIGHTFAST,
+    "BTRS": BACKWARDTURNRIGHTSLOW,
+    "BTLF": BACKWARDTURNLEFTFAST,
+    "BTLS": BACKWARDTURNLEFTSLOW,
+}
 
 
 class JoyStickGo2(Wraps):
@@ -106,9 +274,7 @@ class JoyStickGo2(Wraps):
         dof_pos, dof_vel = obs["dof.pos"], obs["dof.vel"]
 
         action = self.action if self.action is not None else torch.zeros_like(dof_pos)
-        self.global_gravity = torch.tensor(
-            [0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float
-        ).repeat(self.B, 1)
+        self.global_gravity = torch.tensor([0.0, 0.0, -0.7], device=gs.device, dtype=gs.tc_float).repeat(self.B, 1)
         projected_gravity = transform_by_quat(self.global_gravity, self.inv_quat)
 
         _obs = {
@@ -129,7 +295,7 @@ class JoyStickGo2(Wraps):
 
         for k in (_scales := self.scales.expand()).keys():
             print(k)
-            scale = _scales.get(k, 1.0)
+            scale = _scales.get(k, 0.7)
             print(type(_obs[k]), type(scale))
             _obs[k] *= scale
 

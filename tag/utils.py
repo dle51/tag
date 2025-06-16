@@ -55,6 +55,7 @@ def space2spec(space: spaces.Space):
         return np.zeros(space.shape, dtype=dtype)
     raise TypeError(f"Unsupported space type: {type(space)}")
 
+
 def obs2space(obs: dict[str, np.ndarray]) -> spaces.Space:
     """Convert a nested collection of arrays to a ``gymnasium.Space`` tree.
 
@@ -71,6 +72,7 @@ def obs2space(obs: dict[str, np.ndarray]) -> spaces.Space:
     else:
         raise TypeError(f"Unsupported obs type: {type(obs)}")
 
+
 def spec2batch_spec(spec, n_envs: int):
     """Stack ``spec`` along a new leading dimension of size ``n_envs``.
 
@@ -83,3 +85,24 @@ def spec2batch_spec(spec, n_envs: int):
         return torch.stack([x] * n_envs)
 
     return jax.tree.map(_stack, spec)
+
+
+def flatten_obs(obs: dict[str, torch.Tensor]) -> torch.Tensor:
+    """c a nested dict (or tree) of tensors into a single 1D torch.Tensor."""
+    flat_list = []
+    for v in jax.tree.leaves(obs):
+        if not isinstance(v, torch.Tensor):
+            v = torch.tensor(v)
+        flat_list.append(v.reshape(-1))
+    return torch.cat(flat_list, dim=0)
+
+
+def infer_flat_obs_space(example_obs: dict[str, torch.Tensor]) -> spaces.Box:
+    """Create a flat gymnasium Box space matching the flattened torch obs."""
+    flat_obs = flatten_obs(example_obs)
+    return spaces.Box(
+        low=-float("inf"),
+        high=float("inf"),
+        shape=flat_obs.shape,
+        dtype=np.float32,  # still needs to be np dtype for gymnasium Box
+    )

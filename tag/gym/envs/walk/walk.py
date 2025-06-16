@@ -3,6 +3,8 @@ import math
 
 import genesis as gs
 from genesis.utils.geom import inv_quat, quat_to_xyz, transform_by_quat, transform_quat_by_quat
+import gymnasium as gym
+import numpy as np
 from rich.pretty import pprint
 import torch
 
@@ -13,7 +15,7 @@ from tag.gym.robots.joystick_go2 import (
     CommandConfig,
 )
 from tag.protocols import Wraps, _Env, _Robot
-from tag.utils import default, defaultcls
+from tag.utils import default, defaultcls, flatten_obs, infer_flat_obs_space
 
 
 def _rand_float(lower, upper, shape, device):
@@ -60,6 +62,118 @@ class RSLWrapper(_Env, Wraps):
 
     def get_privileged_observations(self):
         return None
+
+
+class GymWrapper(gym.Env):
+    """
+    A wrapper to adapt a Genesis environment to the Gymnasium (OpenAI Gym) interface.
+
+    This wrapper flattens observations and exposes the action and observation spaces
+    for compatibility with Gym-based RL libraries.
+    """
+
+    def __init__(self, genesis_env):
+        self.env = genesis_env
+        example_obs, _ = self.env.reset()
+        self.observation_space = infer_flat_obs_space(example_obs)
+        self.action_space = self.env.action_space
+
+    def reset(self, **kwargs):
+        obs, _ = self.env.reset(**kwargs)
+        return flatten_obs(obs), {}
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        return flatten_obs(obs), reward, terminated, truncated, info
+
+    def render(self, mode="human"):
+        if hasattr(self.env, "render"):
+            return self.env.render(mode=mode)
+
+    def close(self):
+        if hasattr(self.env, "close"):
+            self.env.close()
+
+    def seed(self, seed=None):
+        if hasattr(self.env, "seed"):
+            self.env.seed(seed)
+
+
+class SBWrapper(gym.Wrapper):
+    """
+    A wrapper for Gym environments to provide compatibility with Stable Baselines3 (SB3).
+
+    This wrapper manages per-environment episode statistics, success tracking, and
+    converts observations and outputs to NumPy arrays as expected by SB3.
+    """
+
+    def __init__(self, env: gym.Env, success_threshold: float = 1.0):
+        super().__init__(env)
+        # assume env.batch_size or env.num_envs tells you how many
+        try:
+            self.n_envs = env.env.B  # self.B
+        except AttributeError:
+            self.n_envs = self.n_envs  # self.B
+        self.success_threshold = success_threshold
+
+        # per-env accumulators:
+        self.episode_rewards = np.zeros(self.n_envs, dtype=float)
+        self.episode_lengths = np.zeros(self.n_envs, dtype=int)
+
+    def reset(self, **kwargs):
+        """
+        Returns:
+           obs: array of shape (n_envs, *obs_space)
+           infos: list of n_envs dicts (usually empty on reset)
+        """
+        obs, infos = self.env.reset(**kwargs)
+        self.episode_rewards.fill(0.0)
+        self.episode_lengths.fill(0)
+        return self._convert_obs(obs), infos
+
+    def step(self, actions):
+        """
+        actions: array of shape (n_envs, *action_space)
+        Returns:
+           obs, rewards, terminated, truncated, infos
+        where each is an array/list of length n_envs.
+        """
+        obs, rewards, terminated, truncated, infos = self.env.step(actions)
+
+        # Convert to Numpy for SB3 compatibility
+        terminated = terminated.cpu()
+        truncated = truncated.cpu()
+        rewards = rewards.cpu().numpy()  # <-- convert to numpy array
+
+        # accumulate
+        self.episode_rewards = np.concatenate((self.episode_rewards, np.array(rewards)))
+        self.episode_lengths += 1
+
+        done = np.logical_or(terminated, terminated)
+
+        # per-env success: only if truly terminated AND reward > threshold
+        is_success = np.logical_and(terminated, rewards > self.success_threshold)
+
+        for i in range(self.n_envs):
+            infos[i]["is_success"] = bool(is_success[i])
+            if done[i]:
+                # log a 0/1 “episode” so SB3’s ep_rew_mean == success rate
+                infos[i]["episode"] = {"r": float(is_success[i]), "l": int(self.episode_lengths[i])}
+                # reset accumulators for that env
+                self.episode_rewards[i] = 0.0
+                self.episode_lengths[i] = 0
+
+        rewards = [float(r) for r in rewards]
+        return self._convert_obs(obs), rewards, terminated, truncated, infos
+
+    def _convert_obs(self, obs):
+        if isinstance(obs, dict):
+            return {k: self._convert_obs(v) for k, v in obs.items()}
+        elif isinstance(obs, torch.Tensor):
+            return obs.detach().cpu().numpy()
+        elif isinstance(obs, (tuple, list)):
+            return type(obs)(self._convert_obs(o) for o in obs)
+        return obs
 
 
 class SpaceClipWrapper(Wraps):
@@ -131,6 +245,7 @@ class Walk(RobotEnv, RewardMixin):
         self._resample_commands(torch.arange(self.num_envs, device=gs.device))
 
     def step(self, actions):
+        actions = torch.as_tensor(actions)  # ensure it's a tensor
         self.actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
         exec_actions = self.last_actions if self.simulate_action_latency else self.actions
         target_dof_pos = exec_actions * self.env_cfg["action_scale"] + self.default_dof_pos
@@ -190,18 +305,27 @@ class Walk(RobotEnv, RewardMixin):
         # self.obf_buf = self.obs
         # self.buf = {'obs': self.obs, 'rew': self.rew_buf, 'reset': self.reset_buf}
 
+        def ensure_2d(tensor):
+            if tensor.dim() == 1:
+                return tensor.unsqueeze(0)
+            return tensor
+
+        batch_size = self.base_lin_vel.shape[0]
+        self.actions = self.actions.unsqueeze(0).repeat(batch_size, 1)
         # compute observations
         self.obs_buf = torch.cat(
             [
-                self.base_lin_vel * self.obs_scales["lin_vel"],  # 3
-                self.base_ang_vel * self.obs_scales["ang_vel"],  # 3
-                self.projected_gravity,  # 3
-                self.commands * self.commands_scale,  # 3
-                (self.dof_pos - self.default_dof_pos) * self.obs_scales["dof_pos"],  # 12
-                self.dof_vel * self.obs_scales["dof_vel"],  # 12
-                self.actions * self.env_cfg["action_scale"],  # 12
+                ensure_2d(self.base_lin_vel * self.obs_scales["lin_vel"]),
+                ensure_2d(self.base_ang_vel * self.obs_scales["ang_vel"]),
+                ensure_2d(self.projected_gravity),
+                ensure_2d(self.commands * self.commands_scale),
+                ensure_2d((self.dof_pos - self.default_dof_pos) * self.obs_scales["dof_pos"]),
+                ensure_2d(self.dof_vel * self.obs_scales["dof_vel"]),
+                ensure_2d(
+                    self.actions * self.env_cfg["action_scale"]
+                ),  # NOTE(dle): I think this breaks the separate parallel actions, adding to run
             ],
-            axis=-1,
+            dim=-1,
         )
 
         _obs = {
@@ -224,7 +348,10 @@ class Walk(RobotEnv, RewardMixin):
 
         # pprint({'rew': self.rew_buf, 'reset': self.reset_buf})
         info_list = [self.extras.copy() for _ in range(self.num_envs)]
-        return self.obs_buf, self.rew_buf, self.reset_buf, info_list
+        # obs, rewards, terminated, truncated, infos
+        terminated = self.checks["pitch"] | self.checks["roll"] | self.checks["height"]
+        truncated = self.checks["truncate"]
+        return self.obs_buf, self.rew_buf, terminated, truncated, info_list
 
     def get_observations(self):
         self.extras["observations"]["critic"] = self.obs_buf
@@ -275,12 +402,12 @@ class Walk(RobotEnv, RewardMixin):
 
         self._resample_commands(envs_idx)
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         # super().reset()
         self.reset_buf[:] = True
         self.reset_idx(torch.arange(self.B, device=gs.device))
 
-        return self.obs_buf, None
+        return self.obs_buf, {}
 
     #
     #

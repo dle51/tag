@@ -2,15 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import jax
 import numpy as np
 import torch
-from gymnasium import spaces
 
 from tag.gym.robots import RobotTyp
 from tag.gym.robots.go2 import Go2Config
 from tag.gym.robots.robot import Robot, RobotConfig
-from tag.utils import defaultcls, obs2space, spec
+from tag.utils import defaultcls
 
 from .world import WorldEnv, WorldEnvConfig
 

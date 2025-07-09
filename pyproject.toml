@@ -27,6 +27,7 @@ dependencies = [
     "flax>=0.10.6",
     "pyopengl>=3.1.0",
     "pyopengl-accelerate>=3.1.9",
+    "skrl[all]>=1.4.3",
 ]
 
 [project.optional-dependencies]

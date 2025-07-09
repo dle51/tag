@@ -2726,6 +2726,30 @@ wheels = [
 ]
 
 [[package]]
+name = "skrl"
+version = "1.4.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "gymnasium" },
+    { name = "packaging" },
+    { name = "tensorboard" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2c/6e/2f9260949187316e91643f69a2c503d96e1b8287baa12560d6ff07ff7716/skrl-1.4.3.tar.gz", hash = "sha256:24770278730c7ee8a7834ab9d7f737f44c4f3e2495c8316a879e11be1e33ec57", size = 214958, upload-time = "2025-03-30T01:29:20.271Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/82/86a1f8ba0aeafc76e842c5c5e6608a8877b68ccfcfc20410d0adee982d66/skrl-1.4.3-py3-none-any.whl", hash = "sha256:7f6396f626c8ecbef6dfcdaea0332e71d0c104149682b3bd9658c07315c4ea36", size = 403710, upload-time = "2025-03-30T01:29:18.264Z" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "flax" },
+    { name = "jax" },
+    { name = "jaxlib" },
+    { name = "optax" },
+    { name = "torch" },
+]
+
+[[package]]
 name = "smmap"
 version = "5.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2777,6 +2801,7 @@ dependencies = [
     { name = "pyopengl-accelerate" },
     { name = "pytest" },
     { name = "rich" },
+    { name = "skrl", extra = ["all"] },
     { name = "tensorboard" },
     { name = "torch" },
     { name = "tqdm" },
@@ -2811,6 +2836,7 @@ requires-dist = [
     { name = "pyopengl-accelerate", specifier = ">=3.1.9" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "rich", specifier = ">=14.0.0" },
+    { name = "skrl", extras = ["all"], specifier = ">=1.4.3" },
     { name = "tensorboard", specifier = ">=2.19.0" },
     { name = "torch", specifier = ">=2.7.0" },
     { name = "tqdm", specifier = ">=4.67.1" },

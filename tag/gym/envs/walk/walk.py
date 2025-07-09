@@ -1,15 +1,17 @@
 from dataclasses import dataclass
 import math
+from typing import Any, Tuple
 
 import genesis as gs
 from genesis.utils.geom import inv_quat, quat_to_xyz, transform_by_quat, transform_quat_by_quat
+import gymnasium as gym
+import numpy as np
 from rich.pretty import pprint
 import torch
 
 from tag.gym.envs.mixins.reward import RewardMixin, WalkReward
 from tag.gym.envs.robotic import Go2EnvConfig, RobotEnv
 from tag.gym.robots.joystick_go2 import OVERFIT, CommandConfig
-from tag.protocols import Wraps, _Env, _Robot
 from tag.utils import default, defaultcls
 
 
@@ -32,42 +34,40 @@ class WalkEnvConfig(Go2EnvConfig):
     auto_reset: bool = True
 
 
-class RSLWrapper(_Env, Wraps):
-    def __init__(self, env: _Env):
-        super().__init__(env)
+class GymWrapper(gym.vector.VectorEnv):
+    """
+    A Gymnasium VectorEnv wrapper for compatibility with the SKRL Library
+    """
+
+    def __init__(self, env):
         self.env = env
-        self.num_envs = self.cfg.sim.num_envs  # for rsl rl # TODO make some env conversion
+        self.num_envs = env.num_envs
+        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(48,), dtype=np.float32)
+        self.single_observation_space = self.observation_space
 
-        self.num_obs = self.observe().shape
-        self.num_privileged_obs = None
-        self.num_actions = env_cfg["num_actions"]
-        self.episode_length = self.ep_len
+        self.action_space = gym.spaces.Box(low=-np.pi, high=np.pi, shape=(12,), dtype=np.float32)
+        self.single_action_space = self.action_space
 
-    @property
-    def episode_length_buf(self):
-        return self.ep_len
+        self.metadata = {"autoreset_mode": "disabled"}
 
-    @episode_length_buf.setter
-    def episode_length_buf(self, value):
-        self.ep_len = value
+    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
+        """
+        Resets all parallel environments and returns batched observations and info.
+        """
+        obs_buf, _ = self.env.reset()
+        return obs_buf, {}
 
-    def get_observations(self):
-        self.extras["observations"]["critic"] = self.obs_buf
-        return self.obs_buf, self.extras
-
-    def get_privileged_observations(self):
-        return None
-
-
-class SpaceClipWrapper(Wraps):
-    def __init__(self, env: _Env | _Robot, clip_actions: float):
-        super().__init__(env)
-        self.env = env
-        self.clip_actions = clip_actions
-
-    def step(self, actions):
-        actions = torch.clip(actions, -self.clip_actions, self.clip_actions)
-        return self.env.step(actions)
+    def step(self, actions) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict[str, Any]]:
+        """
+        Take an action for each parallel environment.
+        Returns batch of observations, rewards, terminations, truncations, and info.
+        """
+        obs_buf, rew_buf, reset_buf, infos = self.env.step(actions)
+        terminated = (
+            self.env.checks["pitch"] | self.env.checks["roll"] | self.env.checks["height"] | self.env.checks["height"]
+        )
+        truncated = self.env.checks["truncate"]
+        return obs_buf, rew_buf, terminated, truncated, infos
 
 
 class Walk(RobotEnv, RewardMixin):
@@ -124,7 +124,7 @@ class Walk(RobotEnv, RewardMixin):
         self.commands[envs_idx, 2] = _rand_float(*self.cfg.command.ang_vel_range, (len(envs_idx),), gs.device)
 
     def step(self, actions):
-        self.actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
+        # self.actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
         exec_actions = self.last_actions if self.simulate_action_latency else self.actions
         target_dof_pos = exec_actions * self.env_cfg["action_scale"] + self.default_dof_pos
         self.robot.robot.control_dofs_position(target_dof_pos, self.robot.dofs)

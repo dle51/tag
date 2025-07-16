@@ -23,7 +23,7 @@ def get_train_cfgs(exp_name, env):
         "mini_batches": 4,
         "discount_factor": 0.99,
         "lambda": 0.95,
-        "learning_rate": 0.001,
+        "learning_rate": 0.0003,
         "learning_rate_scheduler": KLAdaptiveRL,
         "learning_rate_scheduler_kwargs": {"kl_threshold": 0.01},
         "state_preprocessor": RunningStandardScaler,
@@ -38,7 +38,6 @@ def get_train_cfgs(exp_name, env):
         "clip_predicted_values": True,
         "entropy_loss_scale": 0.01,
         "value_loss_scale": 1.0,
-        "kl_threshold": 0,
         "rewards_shaper": None,
         "time_limit_bootstrap": False,
         "mixed_precision": False,
@@ -48,7 +47,7 @@ def get_train_cfgs(exp_name, env):
             "write_interval": "auto",
             "checkpoint_interval": 100,
             "store_separately": False,
-            "wandb": True,
+            "wandb": False,
             "wandb_kwargs": {"project": "walk", "name": exp_name},
         },
     }
@@ -73,22 +72,21 @@ def get_cfgs():
             "RL_calf_joint": -1.5,
             "RR_calf_joint": -1.5,
         },
-        "kp": 20.0,
-        "kd": 0.5,
+        "kp": 10.0,
+        "kd": 0.25,
         "episode_length_s": 20.0,
         "resampling_time_s": 4.0,
         "action_scale": 0.25,
         "simulate_action_latency": True,
-        "clip_actions": 100.0,
     }
 
     obs_cfg = {
         "num_obs": 48,
         "obs_scales": {
-            "lin_vel": 2.0,
-            "ang_vel": 0.25,
+            "lin_vel": 1.0,
+            "ang_vel": 0.5,
             "dof_pos": 1.0,
-            "dof_vel": 0.05,
+            "dof_vel": 0.1,
         },
     }
 
@@ -102,8 +100,8 @@ class Policy(GaussianMixin, Model):
         action_space,
         device,
         clip_actions=False,
-        clip_log_std=-20,
-        min_log_std=2,
+        clip_log_std=True,
+        min_log_std=-5,
         max_log_std=2,
         reduction="sum",
     ):
@@ -119,10 +117,37 @@ class Policy(GaussianMixin, Model):
             nn.ELU(),
             nn.Linear(128, self.num_actions),
         )
-        self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
+        self.log_std_parameter = nn.Parameter(torch.ones(self.num_actions) * -1.0)
+        self.step_count = 0
 
     def compute(self, inputs, role):
-        return self.net(inputs["states"]), self.log_std_parameter, {}
+        self.step_count += 1
+
+        # Check input for NaN
+        if torch.isnan(inputs["states"]).any():
+            print(f"Step {self.step_count}: NaN detected in input states!")
+            print(f"Input stats: min={inputs['states'].min()}, max={inputs['states'].max()}")
+
+        # Forward pass
+        raw_output = self.net(inputs["states"])
+
+        # Check raw network output for NaN
+        if torch.isnan(raw_output).any():
+            print(f"Step {self.step_count}: NaN detected in raw policy output!")
+            print(f"Raw output stats: min={raw_output.min()}, max={raw_output.max()}")
+
+        # Apply tanh
+        tanh_output = torch.tanh(raw_output)
+
+        # Check tanh output for NaN
+        if torch.isnan(tanh_output).any():
+            print(f"Step {self.step_count}: NaN detected in tanh output!")
+
+        # Check log_std for NaN
+        if torch.isnan(self.log_std_parameter).any():
+            print(f"Step {self.step_count}: NaN detected in log_std_parameter!")
+
+        return tanh_output, self.log_std_parameter, {}
 
 
 class Value(DeterministicMixin, Model):
@@ -163,7 +188,7 @@ def main(cfg: Config):
     genesis_env = Walk(cfg, env_cfg=env_cfg, obs_cfg=obs_cfg)
     genesis_env.build()
 
-    # Testing Gym Wrapper
+    # Gym Wrapper
     gym_env = GymWrapper(genesis_env)
 
     # SKRL Wrapping
@@ -173,7 +198,7 @@ def main(cfg: Config):
     train_cfg = get_train_cfgs(cfg.exp_name, env)
 
     # Memory Instantiatation
-    memory = RandomMemory(memory_size=1024, num_envs=env.num_envs, device=env.device)
+    memory = RandomMemory(memory_size=48 * env.num_envs, num_envs=env.num_envs, device=env.device)
 
     # Models
     models = {}

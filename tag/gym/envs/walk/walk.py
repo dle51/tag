@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+import json
 import math
+import os
 from typing import Any, Tuple
 
 import genesis as gs
@@ -13,6 +15,18 @@ from tag.gym.envs.mixins.reward import RewardMixin, WalkReward
 from tag.gym.envs.robotic import Go2EnvConfig, RobotEnv
 from tag.gym.robots.joystick_go2 import OVERFIT, CommandConfig
 from tag.utils import default, defaultcls
+
+LOG_PATH = "./json_logs/run.json"
+os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+
+
+def to_serializable(x):
+    """Convert torch.Tensor or np.ndarray to list, or return as-is."""
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu().tolist()
+    elif isinstance(x, np.ndarray):
+        return x.tolist()
+    return x
 
 
 def _rand_float(lower, upper, shape, device):
@@ -42,13 +56,18 @@ class GymWrapper(gym.vector.VectorEnv):
     def __init__(self, env):
         self.env = env
         self.num_envs = env.num_envs
-        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(48,), dtype=np.float32)
-        self.single_observation_space = self.observation_space
 
-        self.action_space = gym.spaces.Box(low=-np.pi, high=np.pi, shape=(12,), dtype=np.float32)
-        self.single_action_space = self.action_space
+        self.observation_space = gym.spaces.Box(low=-10.0, high=10.0, shape=(self.num_envs, 48), dtype=np.float32)
+        self.single_observation_space = gym.spaces.Box(low=-10.0, high=10.0, shape=(48,), dtype=np.float32)
+
+        self.action_space = gym.spaces.Box(
+            low=-1.0, high=1.0, shape=(self.num_envs, 12), dtype=np.float32
+        )  # Set to 1 due for tanh
+        self.single_action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(12,), dtype=np.float32)
 
         self.metadata = {"autoreset_mode": "disabled"}
+
+        self.timestep = 0
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         """
@@ -62,11 +81,29 @@ class GymWrapper(gym.vector.VectorEnv):
         Take an action for each parallel environment.
         Returns batch of observations, rewards, terminations, truncations, and info.
         """
+        self.timestep += 1
         obs_buf, rew_buf, reset_buf, infos = self.env.step(actions)
         terminated = (
             self.env.checks["pitch"] | self.env.checks["roll"] | self.env.checks["height"] | self.env.checks["height"]
         )
         truncated = self.env.checks["truncate"]
+
+        if self.timestep < 50:
+            log_data = {
+                "timestep": self.timestep,
+                "actions": to_serializable(actions),
+                "observations": to_serializable(obs_buf),
+                "rewards": to_serializable(rew_buf),
+                "terminated": to_serializable(terminated),
+                "truncated": to_serializable(truncated),
+            }
+
+            with open(LOG_PATH, "a") as f:
+                f.write(json.dumps(log_data) + "\n")
+
+        if self.timestep == 50:
+            print("Should have dumped")
+
         return obs_buf, rew_buf, terminated, truncated, infos
 
 
@@ -124,7 +161,6 @@ class Walk(RobotEnv, RewardMixin):
         self.commands[envs_idx, 2] = _rand_float(*self.cfg.command.ang_vel_range, (len(envs_idx),), gs.device)
 
     def step(self, actions):
-        # self.actions = torch.clip(actions, -self.env_cfg["clip_actions"], self.env_cfg["clip_actions"])
         exec_actions = self.last_actions if self.simulate_action_latency else self.actions
         target_dof_pos = exec_actions * self.env_cfg["action_scale"] + self.default_dof_pos
         self.robot.robot.control_dofs_position(target_dof_pos, self.robot.dofs)
@@ -178,11 +214,6 @@ class Walk(RobotEnv, RewardMixin):
         self.compute_reward()
         self.render()
 
-        # scales = self.obs_scales | {"cmd": self.commands_scale}
-        # self.obs = self.robot.observe(self.inv_base_init_quat, self.global_gravity, scales, self.commands, self.default_dof_pos, self.actions)
-        # self.obf_buf = self.obs
-        # self.buf = {'obs': self.obs, 'rew': self.rew_buf, 'reset': self.reset_buf}
-
         # compute observations
         self.obs_buf = torch.cat(
             [
@@ -215,7 +246,6 @@ class Walk(RobotEnv, RewardMixin):
 
         self.extras["observations"]["critic"] = self.obs_buf
 
-        # pprint({'rew': self.rew_buf, 'reset': self.reset_buf})
         return self.obs_buf, self.rew_buf, self.reset_buf, self.extras
 
     def get_observations(self):

@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, Protocol, Tuple
 from gymnasium import spaces
 
 
-class _Env(Protocol):
+class _Env():
     def build(self) -> None: ...
 
     def reset(self) -> Tuple[Any, Dict[str, Any]]: ...
@@ -14,31 +14,26 @@ class _Env(Protocol):
     def observe(self) -> Tuple[Any, Dict[str, Any]]: ...
 
 
-class _Robot(ABC):
-    @abstractmethod
-    def reset(self) -> None:
+class _Robot():
+    def reset(self):
         """
         Reset the robot to its initial state
         Does not return obs like env.reset()
         """
         pass
 
-    @abstractmethod
     def act(self):
         """Perform an action on the robot."""
         pass
 
-    @abstractmethod
-    def observe(self) -> Dict[str, Any]:
+    def observe(self):
         """Collect observations from the robot."""
 
-    @abstractmethod
-    def observation_space(self) -> spaces.Space:
+    def observation_space(self):
         """Returns the observation space of the robot."""
         pass
 
-    @abstractmethod
-    def action_space(self) -> spaces.Space:
+    def action_space(self):
         """Returns the action space of the robot."""
         pass
 

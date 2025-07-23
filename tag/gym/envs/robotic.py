@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from gymnasium import spaces
 import jax
 import numpy as np
 import torch
-from gymnasium import spaces
 
 from tag.gym.robots import RobotTyp
 from tag.gym.robots.go2 import Go2Config
+from tag.gym.robots.multi_robot import MultiRobot, MultiRobotConfig
 from tag.gym.robots.robot import Robot, RobotConfig
 from tag.utils import defaultcls, obs2space, spec
 
@@ -28,10 +29,9 @@ class Go2EnvConfig(RobotEnvConfig):
 
 
 @dataclass
-class MultiGo2EnvConfig(Go2EnvConfig):
+class MultiGo2EnvConfig(Go2EnvConfig, MultiRobotConfig):
     robot: RobotTyp = defaultcls(Go2Config)
     n_robots: int = 2
-
 
 class RobotEnv(WorldEnv):
     """Environment for robotic tasks."""
@@ -72,3 +72,8 @@ class RobotEnv(WorldEnv):
         """Collect observations from robots and environment."""
         self._obs = {"robot": self.robot.observe()} | super().observe()
         return self._obs
+
+class MultiRobotEnv(RobotEnv): # for go2
+    def __init__(self, cfg: MultiGo2EnvConfig):
+        WorldEnv.__init__(self, cfg)
+        self.robots = MultiRobot(self.scene, cfg, cfg.n_robots)

@@ -7,7 +7,8 @@ import torch
 from tag.gym.base.config import Task
 from tag.gym.envs.robotic import MultiGo2EnvConfig, RobotEnv
 from tag.gym.robots.joystick_go2 import OVERFIT, CommandConfig, JoyStickGo2
-from tag.gym.robots.multi import MultiRobot
+
+# from tag.gym.robots.multi import MultiRobot
 from tag.utils import default, defaultcls
 
 from ..world import WorldEnv

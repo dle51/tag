@@ -18,12 +18,12 @@ from tag.gym.envs.walk.walk import GymWrapper, Walk, WalkEnvConfig
 def get_train_cfgs(exp_name, env):
     # TODO: Fix Parameters
     train_cfg = {
-        "rollouts": 24,
-        "learning_epochs": 5,
-        "mini_batches": 4,
+        "rollouts": 1024,
+        "learning_epochs": 10,
+        "mini_batches": 32,
         "discount_factor": 0.99,
         "lambda": 0.95,
-        "learning_rate": 0.0003,
+        "learning_rate": 0.001,
         "learning_rate_scheduler": KLAdaptiveRL,
         "learning_rate_scheduler_kwargs": {"kl_threshold": 0.01},
         "state_preprocessor": RunningStandardScaler,
@@ -44,10 +44,10 @@ def get_train_cfgs(exp_name, env):
         "experiment": {
             "directory": "logs/",
             "experiment_name": exp_name,
-            "write_interval": "auto",
+            "write_interval": 100,
             "checkpoint_interval": 100,
             "store_separately": False,
-            "wandb": False,
+            "wandb": True,
             "wandb_kwargs": {"project": "walk", "name": exp_name},
         },
     }
@@ -147,7 +147,7 @@ class Policy(GaussianMixin, Model):
         if torch.isnan(self.log_std_parameter).any():
             print(f"Step {self.step_count}: NaN detected in log_std_parameter!")
 
-        return tanh_output, self.log_std_parameter, {}
+        return 3.1415 * tanh_output, self.log_std_parameter, {}
 
 
 class Value(DeterministicMixin, Model):
@@ -198,7 +198,7 @@ def main(cfg: Config):
     train_cfg = get_train_cfgs(cfg.exp_name, env)
 
     # Memory Instantiatation
-    memory = RandomMemory(memory_size=48 * env.num_envs, num_envs=env.num_envs, device=env.device)
+    memory = RandomMemory(memory_size=1024, num_envs=env.num_envs, device=env.device)
 
     # Models
     models = {}

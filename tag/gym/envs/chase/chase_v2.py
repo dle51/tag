@@ -31,7 +31,7 @@ def _int(shape):
 @dataclass
 class ChaseEnvConfig(MultiGo2EnvConfig):
     # TODO(dle): Implement commands, scales, rewards, Etc.
-    commands: CommandConfig = default(OVERFIT)  # Placeholder
+    command: CommandConfig = default(OVERFIT)  # Placeholder
     rewards: ChaseReward = defaultcls(ChaseReward)  # Needs to be implemented
     auto_reset: bool = True
 
@@ -103,6 +103,7 @@ class Chase(MultiRobotEnv, RewardMixin):
         self.robot_params = {}
 
         self._init_robot_params()
+        self._init_buffers()
 
     def build(self):
         super().build()
@@ -128,21 +129,20 @@ class Chase(MultiRobotEnv, RewardMixin):
             selection = 2: Robots 1 & 2 with actions & actions_2
         """
 
-        assert selection == 0 or 1 or 2, "Invalid selection in step method."
+        assert selection == 0 or selection == 1 or selection == 2, "Invalid selection in step method."
 
         exec_actions = {}
         target_dof_pos = {}
         robot_1, robot_2 = list(self.robots.robots.keys())[0], list(self.robots.robots.keys())[1]
 
-        self.robot_buf[robot_1]["actions"] = actions
         # Actions update
         if selection == 0:
-            self.robot_buf[robot_1]["actions"] = actions
+            self.robot_buf[robot_1]["actions"] = torch.tensor(actions, dtype=torch.float32, device=self.device)
         elif selection == 1:
-            self.robot_buf[robot_2]["actions"] = actions
+            self.robot_buf[robot_2]["actions"] = torch.tensor(actions, dtype=torch.float32, device=self.device)
         elif selection == 2:
-            self.robot_buf[robot_1]["actions"] = actions
-            self.robot_buf[robot_2]["actions"] = actions_2
+            self.robot_buf[robot_1]["actions"] = torch.tensor(actions, dtype=torch.float32, device=self.device)
+            self.robot_buf[robot_2]["actions"] = torch.tensor(actions_2, dtype=torch.float32, device=self.device)
 
         # exec_actions
         if selection == 0 or selection == 2:
@@ -159,19 +159,19 @@ class Chase(MultiRobotEnv, RewardMixin):
             )
 
         # target_dof_pos
-        if selection == 0 or 2:
+        if selection == 0 or selection == 2:
             target_dof_pos[robot_1] = (
                 exec_actions[robot_1] * self.env_cfg["action_scale"] + self.robot_buf[robot_1]["default_dof_pos"]
             )
-        if selection == 1 or 2:
+        if selection == 1 or selection == 2:
             target_dof_pos[robot_2] = (
                 exec_actions[robot_2] * self.env_cfg["action_scale"] + self.robot_buf[robot_2]["default_dof_pos"]
             )
 
         # Genesis movement
-        if selection == 0 or 2:
+        if selection == 0 or selection == 2:
             self.robots.robots[robot_1].control_dofs_position(target_dof_pos[robot_1], self.robots.robots[robot_1].dofs)
-        if selection == 1 or 2:
+        if selection == 1 or selection == 2:
             self.robots.robots[robot_2].control_dofs_position(target_dof_pos[robot_2], self.robots.robots[robot_2].dofs)
 
         self.scene.step()
@@ -233,7 +233,7 @@ class Chase(MultiRobotEnv, RewardMixin):
         if self.cfg.auto_reset:
             self.reset_idx(self.reset_buf.nonzero(as_tuple=False).flatten())
 
-        self.compute_reward()
+        # self.compute_reward() - Not Implemented
         self.render()
 
         # Computing observations
@@ -366,7 +366,7 @@ class Chase(MultiRobotEnv, RewardMixin):
             self.robot_buf[robot]["projected_gravity"] = _float((self.num_envs, 3))
 
             self.robot_buf[robot]["default_dof_pos"] = torch.tensor(
-                [robot.cfg.state.joints[name] for name in robot.cfg.dof_names],
+                [self.robots.robots[robot].cfg.state.joints[name] for name in self.robots.robots[robot].cfg.dof_names],
                 device=gs.device,
                 dtype=gs.tc_float,
             )
@@ -385,7 +385,10 @@ class Chase(MultiRobotEnv, RewardMixin):
         for robot in self.robots.robots.keys():
             self.robot_params[robot] = {}
 
-            cfg = robot.cfg
-            self.robot_params[robot]["base_init_pos"] = torch.tensor(cfg.robot.state.pos, device=gs.device)
-            self.robot_params[robot]["base_init_quat"] = torch.tensor(cfg.robot.state.quat, device=gs.device)
+            self.robot_params[robot]["base_init_pos"] = torch.tensor(
+                self.robots.robots[robot].cfg.state.pos, device=gs.device
+            )
+            self.robot_params[robot]["base_init_quat"] = torch.tensor(
+                self.robots.robots[robot].cfg.state.quat, device=gs.device
+            )
             self.robot_params[robot]["inv_base_init_quat"] = inv_quat(self.robot_params[robot]["base_init_quat"])

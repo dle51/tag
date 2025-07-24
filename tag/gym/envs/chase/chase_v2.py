@@ -39,7 +39,7 @@ class ChaseEnvConfig(MultiGo2EnvConfig):
 class SingleGymWrapper(gym.vector.VectorEnv):
     """
     A Gymnasium VectorEnv wrapper for a multi-robotic environment.
-    Allows for the Policy to send actions to a singular robot.
+    Allows for the Policy to send actions to a singular (first) robot.
     Minimum inplementation for compatibility with the SKRL Library.
     """
 
@@ -72,10 +72,7 @@ class SingleGymWrapper(gym.vector.VectorEnv):
         Returns batch of observations, rewards, terminations, truncations, and info.
         """
         self.timestep += 1
-        obs_buf, rew_buf, terminated, truncated, infos = self.env.step(actions)
-
-        if self.timestep == 50:
-            print("Should have dumped")
+        obs_buf, rew_buf, terminated, truncated, infos = self.env.step(actions, selection=0)
 
         return obs_buf, rew_buf, terminated, truncated, infos
 
@@ -136,6 +133,16 @@ class Chase(MultiRobotEnv, RewardMixin):
         exec_actions = {}
         target_dof_pos = {}
         robot_1, robot_2 = list(self.robots.robots.keys())[0], list(self.robots.robots.keys())[1]
+
+        self.robot_buf[robot_1]["actions"] = actions
+        # Actions update
+        if selection == 0:
+            self.robot_buf[robot_1]["actions"] = actions
+        elif selection == 1:
+            self.robot_buf[robot_2]["actions"] = actions
+        elif selection == 2:
+            self.robot_buf[robot_1]["actions"] = actions
+            self.robot_buf[robot_2]["actions"] = actions_2
 
         # exec_actions
         if selection == 0 or selection == 2:
@@ -218,7 +225,7 @@ class Chase(MultiRobotEnv, RewardMixin):
             "height": self.robot_buf[robot_1]["base_pos"][:, 2] < self.cfg.rewards.termination_if_height_lower_than
             or self.robot_buf[robot_2]["base_pos"][:, 2] < self.cfg.rewards.termination_if_height_lower_than,
         }
-        # TODO/NOTE(dle): Where to implement resetting without termination/truncation - collision
+        # TODO/NOTE(dle): Where to implement resetting without termination/truncation - completion upon collision
         self.reset_buf = self.checks["truncate"] | self.checks["pitch"] | self.checks["roll"] | self.checks["height"]
         truncated = self.checks["truncate"]
         terminated = self.checks["pitch"] | self.checks["roll"] | self.checks["height"]

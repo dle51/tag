@@ -161,6 +161,7 @@ class Walk(RobotEnv, RewardMixin):
         self.commands[envs_idx, 2] = _rand_float(*self.cfg.command.ang_vel_range, (len(envs_idx),), gs.device)
 
     def step(self, actions):
+        self.actions = actions
         exec_actions = self.last_actions if self.simulate_action_latency else self.actions
         target_dof_pos = exec_actions * self.env_cfg["action_scale"] + self.default_dof_pos
         self.robot.robot.control_dofs_position(target_dof_pos, self.robot.dofs)

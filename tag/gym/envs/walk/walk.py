@@ -304,10 +304,6 @@ class Walk(RobotEnv, RewardMixin):
 
         return self.obs_buf, None
 
-    #
-    #
-    #
-
     def _init_robot_param(self):
         """called after build but before running"""
 

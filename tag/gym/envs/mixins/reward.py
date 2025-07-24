@@ -69,6 +69,14 @@ class WalkReward(DenseReward):
 
 @dataclass
 class SparseReward(RewardConfig):
+    termination_if_roll_greater_than: float = 0.4
+    termination_if_pitch_greater_than: float = 0.4
+    termination_if_height_lower_than: float = 0.2
+
+    scales: RewardScales = defaultcls(RewardScales)
+
+@dataclass
+class ChaseReward(SparseReward):
     pass
 
 
